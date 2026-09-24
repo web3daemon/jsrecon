@@ -14,6 +14,7 @@ def to_dict(a: Analysis, target: str) -> dict:
         "sources_parsed": a.sources,
         "endpoints": [{"method": e.method or None, "url": e.url, "confidence": e.kind, "line": e.line} for e in a.endpoints],
         "graphql": [{"operation": g.operation, "name": g.name, "line": g.line} for g in a.graphql],
+        "routes": [{"path": r.path, "line": r.line} for r in a.routes],
         "secrets": [{"label": s.label, "severity": s.severity, "preview": s.preview, "line": s.line} for s in a.secrets],
     }
 
@@ -27,6 +28,7 @@ def to_markdown(a: Analysis, target: str) -> str:
     lines.append(f"Parsed **{len(a.sources)}** source files · "
                  f"**{len(a.endpoints)}** endpoints · "
                  f"**{len(a.graphql)}** GraphQL ops · "
+                 f"**{len(a.routes)}** routes · "
                  f"**{len(a.secrets)}** secret findings.\n")
 
     if a.endpoints:
@@ -38,6 +40,11 @@ def to_markdown(a: Analysis, target: str) -> str:
         lines += ["## GraphQL", "", "| Operation | Name | Line |", "|---|---|---|"]
         for g in a.graphql:
             lines.append(f"| {g.operation} | `{g.name}` | {g.line} |")
+        lines.append("")
+    if a.routes:
+        lines += ["## Client-side routes", "", "| Path | Line |", "|---|---|"]
+        for r in a.routes:
+            lines.append(f"| `{r.path}` | {r.line} |")
         lines.append("")
     if a.secrets:
         lines += ["## Secrets that should not ship to the client", "",

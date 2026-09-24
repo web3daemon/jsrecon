@@ -89,13 +89,19 @@ def _print_summary(console, a: Analysis, target: str, n_assets: int) -> None:
         for g in a.graphql[:100]:
             t.add_row(g.operation, g.name, str(g.line))
         console.print(t)
+    if a.routes:
+        t = Table(title=f"Client-side routes ({len(a.routes)})", title_justify="left", header_style="bold")
+        t.add_column("Path", overflow="fold"); t.add_column("Line", justify="right")
+        for r in a.routes[:100]:
+            t.add_row(r.path, str(r.line))
+        console.print(t)
     if a.secrets:
         t = Table(title=f"Secrets not meant for the client ({len(a.secrets)})", title_justify="left", header_style="bold red")
         t.add_column("Sev"); t.add_column("Kind"); t.add_column("Preview"); t.add_column("Line", justify="right")
         for s in a.secrets[:100]:
             t.add_row(s.severity, s.label, s.preview, str(s.line))
         console.print(t)
-    if not (a.endpoints or a.graphql or a.secrets):
+    if not (a.endpoints or a.graphql or a.routes or a.secrets):
         console.print("[dim]nothing recognised.[/dim]")
 
 

@@ -38,6 +38,9 @@ def _looks_like_url(s: str) -> bool:
     return bool(_ABS_RE.match(s) or _PATH_RE.match(s))
 
 
+_VERBS_UP = tuple(v.upper() for v in VERBS)
+
+
 def _method_from_callee(callee: str) -> str | None:
     low = callee.lower()
     tail = low.rsplit(".", 1)[-1]
@@ -45,20 +48,26 @@ def _method_from_callee(callee: str) -> str | None:
         return tail.upper()
     if low.endswith("fetch") or low.endswith("axios") or low == "axios" or low.endswith(".ajax") or low.endswith("request"):
         return "GET"
-    if low.endswith(".open"):  # XMLHttpRequest#open(method, url) — method is arg 0
-        return "GET"
     return None
 
 
 def from_calls(calls: list[Call]) -> list[Endpoint]:
     out = []
     for c in calls:
-        if not c.arg or not _looks_like_url(c.arg):
+        tail = c.callee.lower().rsplit(".", 1)[-1]
+        # XMLHttpRequest#open(method, url)
+        if tail == "open" and len(c.args) >= 2 and c.args[0].upper() in _VERBS_UP and _looks_like_url(c.args[1]):
+            out.append(Endpoint(c.args[0].upper(), c.args[1], "call", c.line))
+            continue
+        url = next((a for a in c.args if _looks_like_url(a)), None)
+        if url is None:
             continue
         method = _method_from_callee(c.callee)
         if method is None:
             continue
-        out.append(Endpoint(method, c.arg, "call", c.line))
+        if c.method_opt:                      # fetch(url, { method: "POST" }) wins
+            method = c.method_opt.upper()
+        out.append(Endpoint(method, url, "call", c.line))
     return out
 
 

@@ -64,18 +64,20 @@ jsrecon map ./app.min.js --out recon --json  # write reports + print JSON
 
 ## Intended use
 
-jsrecon is for understanding and integrating with web APIs you are **allowed**
-to use, and for auditing your **own** bundles:
+jsrecon reads the JavaScript a site already serves to every visitor — the same
+bytes your browser downloads — and makes sense of it. Point it at any app whose
+API you need to understand:
 
-- your own front-ends — including catching a secret that slipped into a client build;
-- public and documented APIs you want a typed client or an OpenAPI spec for;
-- authorized security work — a bug-bounty target within its stated scope, or a
-  pentest you have written permission for.
+- a third-party service with no public SDK or docs, so you can build a client;
+- a public API you want a typed client or an OpenAPI spec for;
+- a bug-bounty target within its stated scope, or a pentest you have permission for;
+- your own front-ends — including catching a secret that slipped into a build.
 
-It only reads JavaScript that a normal visit already downloads; it does not
-break authentication, bypass bot protection, or hide what it is. Don't point it
-at systems you don't own or aren't authorized to test. You are responsible for
-how you use it.
+It's a reverse-engineering tool in the same spirit as
+[httpcrabber](https://github.com/web3daemon/httpcrabber-client), LinkFinder or
+mitmproxy2swagger: it only reads what a normal page load fetches, and it never
+breaks authentication, bypasses bot protection, or hides what it is. Don't point
+it at systems you aren't authorized to test — you are responsible for how you use it.
 
 ## Roadmap
 

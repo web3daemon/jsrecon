@@ -19,6 +19,22 @@ def test_call_endpoint_with_method():
     assert ("GET", "/api/users") in eps
 
 
+def test_method_from_fetch_options():
+    # fetch("/v1/session", { method: "POST" }) must resolve to POST, not GET
+    assert ("POST", "/v1/session") in _endpoints(APP)
+
+
+def test_xhr_open_method_and_url():
+    assert ("GET", "/api/health") in _endpoints(APP)
+
+
+def test_client_routes():
+    a = analyze_code(APP, "app.js")
+    a.dedupe()
+    paths = {r.path for r in a.routes}
+    assert {"/dashboard", "/login"} <= paths
+
+
 def test_absolute_url_literal():
     eps = _endpoints(APP)
     assert any(url == "https://api.example.com/v2" for _, url in eps)
