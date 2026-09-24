@@ -11,9 +11,9 @@ import json
 import posixpath
 import re
 import urllib.parse
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 _SM_RE = re.compile(r"//[#@]\s*sourceMappingURL=(\S+)")
 
@@ -25,7 +25,7 @@ class SourceMap:
 
     def originals(self) -> list[tuple[str, str]]:
         out = []
-        for name, content in zip(self.sources, self.contents):
+        for name, content in zip(self.sources, self.contents, strict=False):
             if content is not None:
                 out.append((name, content))
         return out

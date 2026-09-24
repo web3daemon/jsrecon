@@ -1,7 +1,6 @@
 # jsrecon — technical specification
 
-Status: v0.1 (MVP scaffold). This is the working spec; sections marked _(planned)_
-are not built yet.
+Status: v0.2. This is the working spec; sections marked _(planned)_ are not built yet.
 
 ## 1. Goal
 
@@ -77,23 +76,29 @@ jsrecon map <url|path> [-o DIR] [--json] [--no-secrets] [--timeout N]
   that look API-shaped (`/api`, `/v1`, `/graphql`, ≥2 segments…). Asset files
   (`.js/.css/.png/…`) are excluded.
 - Dedupe: a `call` for a URL outranks a bare `literal` for the same URL.
-- Template strings resolve to their **static prefix** (cut at the first `${`).
+- Template strings keep their shape: each `${expr}` becomes a `{name}` placeholder
+  (`/orders/${id}/refund` → `/orders/{id}/refund`); minifier names (1–2 letters,
+  except `id`) become `{param}`. A template that *starts* with `${…}` has no static
+  anchor and is skipped.
+- A verb method (`.get/.post/…`) on an API-shaped path counts as a call even when
+  the object was renamed by the minifier (`s.get("/api/orders")`). An API-shaped
+  argument of an unknown callee is kept as a `literal` candidate.
+- Every finding carries `source` + `line`. Recovered originals are analysed before
+  their bundle, and dedupe keeps the first finding, so locations point at the
+  original file. Placeholders are compared by position (`{id}` ≡ `{param}`).
 
-## 7. Known limitations (v0.1)
+## 7. Known limitations (v0.2)
 
-- `fetch(url, {method})` — the method inside the options object is not read yet;
-  such calls default to GET.
-- `XMLHttpRequest.open(method, url)` — url is the 2nd arg; not captured yet.
 - Paths built entirely by interpolation (`` `${base}${path}` ``) can't be
   resolved statically.
 - No TS-in-`.js` detection beyond file extension.
 
 ## 8. Roadmap (priority order)
 
-1. **method from `fetch` options** and XHR/`.open` — close the obvious gaps.
-2. **client-side routes** (react-router/vue-router tables) and **feature flags**.
-3. **OpenAPI enrichment**: merge duplicate paths, infer path params (`/users/{id}`),
-   collect query params.
+1. ~~method from `fetch` options and XHR `.open`~~ — done in v0.2.
+2. ~~client-side routes~~ — done in v0.2; **feature flags** still open.
+3. ~~OpenAPI path/query params from templates~~ — done in v0.2; still open: infer
+   `/users/42` + `/users/77` → `/users/{id}` from literal samples, request bodies.
 4. **typed client generator**: async `httpx` + pydantic from the recovered API,
    with auth/token flow inferred from several request samples.
 5. **MCP server**: `jsrecon serve` exposing `list_endpoints` / `describe_endpoint`.

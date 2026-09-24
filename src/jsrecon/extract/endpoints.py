@@ -28,6 +28,7 @@ class Endpoint:
     url: str
     kind: str            # "call" | "literal"
     line: int
+    source: str = ""     # file the finding came from (bundle or original source)
 
 
 def _looks_like_url(s: str) -> bool:
@@ -63,12 +64,24 @@ def from_calls(calls: list[Call]) -> list[Endpoint]:
         if url is None:
             continue
         method = _method_from_callee(c.callee)
+        if method is None and tail in VERBS and _api_shaped(url):
+            # minified client: `s.get("/api/orders")` — the object lost its name,
+            # but a verb method on an API-shaped path is still an HTTP call
+            method = tail.upper()
         if method is None:
+            # unknown callee (a renamed fetch, a wrapper): keep an API-shaped
+            # argument as a candidate rather than dropping it
+            if _api_shaped(url):
+                out.append(Endpoint("", url, "literal", c.line))
             continue
         if c.method_opt:                      # fetch(url, { method: "POST" }) wins
             method = c.method_opt.upper()
         out.append(Endpoint(method, url, "call", c.line))
     return out
+
+
+def _api_shaped(v: str) -> bool:
+    return bool(_ABS_RE.match(v) or _API_HINT.search(v))
 
 
 def from_literals(strings: list[Str]) -> list[Endpoint]:

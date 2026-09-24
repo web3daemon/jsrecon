@@ -32,6 +32,7 @@ class Secret:
     severity: str
     preview: str
     line: int
+    source: str = ""     # file the finding came from (bundle or original source)
 
 
 def _mask(match: str) -> str:

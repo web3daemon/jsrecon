@@ -19,6 +19,7 @@ _ROUTE_RES = [
 class Route:
     path: str
     line: int
+    source: str = ""     # file the finding came from (bundle or original source)
 
 
 def find(code: str) -> list[Route]:

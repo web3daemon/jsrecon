@@ -10,17 +10,19 @@ from __future__ import annotations
 
 import re
 import urllib.parse
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import httpx
+
+from . import __version__
 
 _SCRIPT_SRC = re.compile(r"<script[^>]+\bsrc=[\"']([^\"']+)[\"']", re.I)
 _MODULEPRELOAD = re.compile(r"<link[^>]+rel=[\"']modulepreload[\"'][^>]+href=[\"']([^\"']+)[\"']", re.I)
 _JS_SUFFIXES = (".js", ".mjs", ".cjs")
 _SOURCE_SUFFIXES = _JS_SUFFIXES + (".ts", ".tsx", ".jsx")
-_UA = "jsrecon/0.1 (+https://github.com/web3daemon/jsrecon)"
+_UA = f"jsrecon/{__version__} (+https://github.com/web3daemon/jsrecon)"
 MAX_ASSETS = 60
 
 

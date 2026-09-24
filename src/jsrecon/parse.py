@@ -8,8 +8,8 @@ the same shapes, so the tool still runs (with lower precision).
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator
 
 try:
     from tree_sitter_language_pack import get_parser
@@ -62,14 +62,44 @@ def _node_text(node, src: bytes) -> str:
     return src[node.start_byte : node.end_byte].decode("utf-8", "replace")
 
 
+def placeholder(expr: str, taken: set[str]) -> str:
+    """`${order.id}` → `{id}`: a path-parameter name for an interpolation.
+
+    One- and two-letter names (other than `id`) are almost always the
+    minifier's, so they become `{param}`; repeats in the same string get a
+    suffix to stay unique."""
+    m = re.search(r"([A-Za-z_$][\w$]*)\s*$", expr.strip())
+    name = m.group(1).lstrip("$") if m else ""
+    if len(name) < 3 and name != "id":
+        name = "param"
+    base, i = name, 2
+    while name in taken:
+        name, i = f"{base}{i}", i + 1
+    taken.add(name)
+    return "{" + name + "}"
+
+
 def _string_literal(node, src: bytes) -> str | None:
-    """The static value of a string / template node, cut at the first ${…}."""
+    """The static value of a string / template node.
+
+    Interpolations become `{name}` placeholders (`/orders/${id}/refund` →
+    `/orders/{id}/refund`). A template that *starts* with one has no static
+    anchor to resolve (`${base}/x`), so it yields ""."""
     if node.type == "string":
         raw = _node_text(node, src)
         return raw[1:-1] if len(raw) >= 2 else ""
     if node.type == "template_string":
-        raw = _node_text(node, src)[1:-1]
-        return raw.split("${", 1)[0]
+        parts = [c for c in node.children if c.type not in ("`",)]
+        if parts and parts[0].type == "template_substitution":
+            return ""
+        taken: set[str] = set()
+        out = []
+        for c in parts:
+            if c.type == "template_substitution":
+                out.append(placeholder(_node_text(c, src)[2:-1], taken))
+            else:
+                out.append(_node_text(c, src))
+        return "".join(out)
     return None
 
 
@@ -145,7 +175,18 @@ def _line_of(code: str, pos: int) -> int:
     return code.count("\n", 0, pos) + 1
 
 
+_SUBST_RE = re.compile(r"\$\{([^}]*)\}")
+
+
+def _template_value(raw: str) -> str:
+    """Same placeholder rule as the tree-sitter path, for the regex fallback."""
+    if raw.startswith("${"):
+        return ""
+    taken: set[str] = set()
+    return _SUBST_RE.sub(lambda m: placeholder(m.group(1), taken), raw)
+
+
 def _parse_regex(code: str) -> tuple[list[Str], list[Call]]:
-    strings = [Str(m.group(2).split("${", 1)[0], _line_of(code, m.start())) for m in _STR_RE.finditer(code)]
-    calls = [Call(m.group(1), [m.group(3).split("${", 1)[0]], None, _line_of(code, m.start())) for m in _CALL_RE.finditer(code)]
+    strings = [Str(_template_value(m.group(2)), _line_of(code, m.start())) for m in _STR_RE.finditer(code)]
+    calls = [Call(m.group(1), [_template_value(m.group(3))], None, _line_of(code, m.start())) for m in _CALL_RE.finditer(code)]
     return strings, calls

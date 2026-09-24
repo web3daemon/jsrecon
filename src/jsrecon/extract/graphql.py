@@ -18,6 +18,7 @@ class GraphQLOp:
     operation: str       # "query" | "mutation" | "subscription"
     name: str            # operation name or "(anonymous)"
     line: int
+    source: str = ""     # file the finding came from (bundle or original source)
 
 
 def _scan(text: str, line: int) -> list[GraphQLOp]:

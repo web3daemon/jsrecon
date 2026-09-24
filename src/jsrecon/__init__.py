@@ -6,4 +6,4 @@ it can see. For understanding and integrating with APIs you are allowed to use,
 and for auditing your own bundles. See README for the intended-use policy.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

@@ -3,6 +3,13 @@ __pycache__/
 .venv/
 *.egg-info/
 dist/
+!examples/shop/dist/
 build/
 .pytest_cache/
+.ruff_cache/
 out/
+recon/
+findings.json
+findings.md
+openapi.json
+sources

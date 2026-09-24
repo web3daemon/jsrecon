@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check src tests scripts examples
+
+  test:
+    name: pytest · ${{ matrix.os }} · py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: jsrecon --version
+      - run: pytest -p no:warnings
+      - name: smoke — map the demo shop
+        run: jsrecon map examples/shop/dist --json > findings.json
+      - name: the demo finds what the README says
+        shell: python
+        run: |
+          import json
+          d = json.load(open("findings.json", encoding="utf-8"))
+          counts = {k: len(d[k]) for k in ("endpoints", "graphql", "routes", "secrets")}
+          print(counts)
+          assert counts == {"endpoints": 16, "graphql": 4, "routes": 8, "secrets": 1}, counts
