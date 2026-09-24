@@ -8,7 +8,6 @@ the same shapes, so the tool still runs (with lower precision).
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
 from dataclasses import dataclass
 
 try:
@@ -103,12 +102,35 @@ def _string_literal(node, src: bytes) -> str | None:
     return None
 
 
-def _walk(node) -> Iterator:
-    stack = [node]
-    while stack:
-        n = stack.pop()
-        yield n
-        stack.extend(reversed(n.children))
+def _concat(node, src: bytes, taken: set[str]) -> str | None:
+    """`"/api/" + "orders"` → "/api/orders"; `"/users/" + id` → "/users/{id}".
+
+    Resolves a `+` chain whose leftmost operand is a string: the minifier's
+    favourite way to split a URL. Non-string operands become placeholders. A
+    chain that starts with a variable (`base + "/x"`) has no anchor → None."""
+    t = node.type
+    if t in ("string", "template_string"):
+        return _string_literal(node, src)
+    if t == "parenthesized_expression" and node.named_children:
+        return _concat(node.named_children[0], src, taken)
+    if t == "binary_expression":
+        op = node.child_by_field_name("operator")
+        left, right = node.child_by_field_name("left"), node.child_by_field_name("right")
+        if op is None or _node_text(op, src) != "+" or left is None or right is None:
+            return None
+        head = _concat(left, src, taken)
+        if head is None:
+            return None
+        tail = _concat(right, src, taken)
+        return head + (tail if tail is not None else placeholder(_node_text(right, src), taken))
+    return None
+
+
+def _value(node, src: bytes) -> str | None:
+    """The static value of a string, template, or `+` chain of them."""
+    if node.type == "binary_expression":
+        return _concat(node, src, set())
+    return _string_literal(node, src)
 
 
 def parse(code: str, lang: str = "javascript") -> tuple[list[Str], list[Call]]:
@@ -126,16 +148,18 @@ def _parse_ts(code: str, lang: str) -> tuple[list[Str], list[Call]]:
     tree = _parser(lang).parse(src)
     strings: list[Str] = []
     calls: list[Call] = []
-    for node in _walk(tree.root_node):
-        if node.type in ("string", "template_string"):
-            # skip strings that are themselves call arguments; the call handler
-            # records those with their method, avoiding duplicates
-            parent = node.parent
-            if parent is not None and parent.type == "arguments":
-                continue
-            val = _string_literal(node, src)
+    stack = [tree.root_node]
+    while stack:
+        node = stack.pop()
+        if node.type in ("string", "template_string", "binary_expression"):
+            val = _value(node, src)
             if val is not None:
-                strings.append(Str(val, node.start_point[0] + 1))
+                # a call argument is recorded by the call handler, with its method
+                parent = node.parent
+                if parent is None or parent.type != "arguments":
+                    strings.append(Str(val, node.start_point[0] + 1))
+                if node.type == "binary_expression":
+                    continue          # its pieces are part of this value, not strings of their own
         elif node.type == "call_expression":
             fn = node.child_by_field_name("function")
             arg_node = node.child_by_field_name("arguments")
@@ -144,12 +168,13 @@ def _parse_ts(code: str, lang: str) -> tuple[list[Str], list[Call]]:
             method_opt = None
             if arg_node is not None:
                 for child in arg_node.named_children:
-                    v = _string_literal(child, src)
+                    v = _value(child, src)
                     if v is not None:
                         args.append(v)
                     elif child.type == "object":
                         method_opt = method_opt or _object_method(child, src)
             calls.append(Call(callee, args, method_opt, node.start_point[0] + 1))
+        stack.extend(reversed(node.children))
     return strings, calls
 
 

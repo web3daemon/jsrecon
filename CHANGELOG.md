@@ -5,6 +5,8 @@
 - **Path and query parameters.** Template paths keep their shape: `` `/orders/${id}/refund` ``
   becomes `/orders/{id}/refund` instead of being cut to `/orders/`; the OpenAPI skeleton gets
   `path` and `query` parameters. Minifier names (`${t}`) become `{param}`.
+- **URLs split across `+`** resolve: `"/api/" + "orders"` → `/api/orders`, `"/users/" + id` →
+  `/users/{id}`; the halves are no longer reported as endpoints of their own.
 - **Every finding says where it came from** — `file:line`, in the original source when a source
   map is available (originals are analysed before the bundle and win on a tie).
 - **Minified clients.** `s.get("/api/orders")` is recognised even after the bundler renamed the

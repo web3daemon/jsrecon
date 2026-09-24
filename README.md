@@ -54,9 +54,10 @@ Grepping a minified bundle for `/api/` gives you noise: strings that were never 
 that were built with a `+` or a template, so the regex only sees half of them.
 
 **jsrecon reads the code the way the engine does.** It parses every bundle with
-[tree-sitter](https://tree-sitter.github.io/), so a minified `s.get(…)`, a method
-hidden in the options object (`fetch(url, { method: "POST" })`) and a templated path
-(`` `/orders/${id}/refund` `` → `/orders/{id}/refund`) all resolve.
+[tree-sitter](https://tree-sitter.github.io/), so a URL split across a `+`
+(`"/api/" + "orders"`), a minified `s.get(…)`, a method hidden in the options object
+(`fetch(url, { method: "POST" })`) and a templated path (`` `/orders/${id}/refund` `` →
+`/orders/{id}/refund`) all resolve.
 
 **And when the bundle ships a source map, the original TypeScript is sitting right inside it.**
 jsrecon writes that tree back to disk and reads *that* instead of the minified soup — real names,

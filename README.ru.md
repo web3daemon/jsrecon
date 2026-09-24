@@ -52,8 +52,8 @@ jsrecon map http://localhost:8080 -o recon            # в другом
 через `+` или шаблон, от которых регулярка видит половину.
 
 **jsrecon читает код так же, как движок.** Каждый бандл разбирается
-[tree-sitter](https://tree-sitter.github.io/)-ом, поэтому минифицированный `s.get(…)`, метод внутри
-объекта опций (`fetch(url, { method: "POST" })`) и шаблонный путь
+[tree-sitter](https://tree-sitter.github.io/)-ом, поэтому URL, разрезанный через `+`
+(`"/api/" + "orders"`), минифицированный `s.get(…)`, метод внутри объекта опций (`fetch(url, { method: "POST" })`) и шаблонный путь
 (`` `/orders/${id}/refund` `` → `/orders/{id}/refund`) распознаются.
 
 **А если бандл отдаёт source map, исходный TypeScript лежит прямо внутри.** jsrecon разворачивает

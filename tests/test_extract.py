@@ -109,3 +109,13 @@ def test_unknown_callee_keeps_api_argument_as_candidate():
     # `const r = window.fetch; r("/api/orders")` — the callee is opaque, the path isn't
     assert ("", "/api/orders") in _endpoints('r("/api/orders")')
     assert not _endpoints('t("some.i18n.key")')
+
+
+def test_string_concatenation_resolves():
+    # the minifier split the URL across a `+`; a regex only sees "/api/"
+    assert ("GET", "/api/orders") in _endpoints('e.get("/api/"+"orders")')
+    assert ("", "/api/users/{id}") in _endpoints('const u = "/api/users/" + id;')
+    # the halves are not reported as endpoints of their own
+    assert ("", "/api/") not in _endpoints('e.get("/api/"+"orders")')
+    # no static anchor on the left: no call, the right half stays a bare candidate
+    assert _endpoints("api.get(base + '/users')") == {("", "/users")}
