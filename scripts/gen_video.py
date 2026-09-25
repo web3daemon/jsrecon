@@ -1,16 +1,22 @@
 """Demo video for social posts: the same frames as assets/demo.svg, as MP4.
 
-    python scripts/gen_video.py [OUT_DIR]        # default build/media
+    python scripts/gen_video.py [OUT_DIR] [--music FILE --at SECONDS]    # default build/media
 
 Needs Chrome/Chromium (frame rendering) and ffmpeg on PATH. Writes:
 
     x.mp4       1920×1080 — X / YouTube
     feed.mp4    1080×1350 — Instagram / Telegram feed (4:5)
+    reels.mp4   1080×1920 — Reels / Shorts, the same card layout as httpcrabber's reels
+
+With --music the track is laid under every video from SECONDS on (pick the spot
+so the drop lands when the report starts streaming, ~2.3 s in); otherwise the
+videos carry a silent track.
 
 Each terminal frame is rendered once (cached in OUT_DIR/.frames), the backdrop
 with the logo once per layout; ffmpeg lays the frames over it with the
-durations from the demo scenario. The 9:16 reel is a separate, 1-bit piece.
+durations from the demo scenario. The beat-cut 1-bit reel is a separate piece.
 """
+import argparse
 import shutil
 import subprocess
 import sys
@@ -34,7 +40,9 @@ POINTS = ["source maps → the original TypeScript",
 LAYOUTS = {
     "x": (1920, 1080, 1320, 134, "wide"),
     "feed": (1080, 1350, 1000, 300, "feed"),
+    "reels": (1080, 1920, 1000, 500, "reels"),
 }
+TAGLINE = "point it at a web app — get the <b>API</b> its JavaScript talks to"
 
 
 def render_frames(work: Path) -> tuple[list[tuple[Path, float]], int, int]:
@@ -68,10 +76,16 @@ def background(layout: str, work: Path, frame_h: int) -> Path:
     points = "".join(f"<li>{p}</li>" for p in POINTS)
     if kind == "wide":        # the post text says the rest
         body = f"""<img src="{logo}" style="position:absolute;left:{(width - 400) // 2}px;top:12px;width:400px">{foot}"""
-    else:
+    elif kind == "feed":
         body = f"""
         <img src="{logo}" style="position:absolute;left:40px;top:{fy - 285}px;width:1000px">
         <ul style="top:{bottom}px">{points}</ul>{foot}"""
+    else:                     # reels: keep clear of the buttons on the right and the caption at the bottom
+        body = f"""
+        <img src="{logo}" style="position:absolute;left:40px;top:{fy - 290}px;width:1000px">
+        <div class="tag" style="top:{bottom + 6}px">{TAGLINE}</div>
+        <ul style="top:{bottom + 110}px">{points}</ul>
+        <div class="cmd" style="top:{bottom + 320}px">$ pipx install jsrecon</div>{foot}"""
     html = work / f"bg_{layout}.html"
     html.write_text(f"""<html><head><meta charset="utf-8"><style>
     body {{ margin:0; width:{width}px; height:{height}px; overflow:hidden; position:relative;
@@ -84,15 +98,24 @@ def background(layout: str, work: Path, frame_h: int) -> Path:
            background-size: 32px 32px; }}
     ul {{ position:absolute; left:80px; right:60px; margin:0; padding:0; list-style:none; font-size:30px; line-height:1.8; }}
     li::before {{ content:"◆  "; color:#ff2fd0; }}
-    .foot {{ position:absolute; left:0; right:0; bottom:{26 if kind == 'wide' else 44}px; text-align:center; color:#5f6f5f; font-size:24px; }}
+    .tag {{ position:absolute; left:0; right:0; text-align:center; color:#00e5ff; font-size:32px; padding:0 60px; line-height:1.4; }}
+    .tag b {{ color:#39ff14; font-weight:700; }}
+    .cmd {{ position:absolute; left:90px; right:90px; padding:22px 30px; border:2px solid rgba(57,255,20,.45);
+            border-radius:14px; background:#0f1511; color:#39ff14; font-size:34px; font-weight:700; }}
+    .foot {{ position:absolute; left:0; right:0; bottom:{ {'wide': 26, 'feed': 44}.get(kind, 70) }px; text-align:center; color:#5f6f5f; font-size:24px; }}
     </style></head><body>{body}</body></html>""", encoding="utf-8")
     png = work / f"bg_{layout}.png"
     chrome_png(html, png, (width, height))
     return png
 
 
-def encode(frames: list[tuple[Path, float]], bg: Path, layout: str, out: Path) -> None:
+def encode(frames: list[tuple[Path, float]], bg: Path, layout: str, out: Path,
+           music: Path | None = None, at: float = 0.0) -> None:
     width, height, fw, fy, _ = LAYOUTS[layout]
+    total = sum(d for _, d in frames)
+    audio = (["-ss", f"{at:.3f}", "-i", str(music)] if music
+             else ["-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo"])   # a silent track: every platform accepts it
+    afx = ["-af", f"afade=t=out:st={total - 0.6:.3f}:d=0.6"] if music else []
     listing = out.with_suffix(".txt")
     lines = []
     for png, duration in frames:
@@ -103,13 +126,13 @@ def encode(frames: list[tuple[Path, float]], bg: Path, layout: str, out: Path) -
         "ffmpeg", "-y", "-loglevel", "error",
         "-loop", "1", "-framerate", str(FPS), "-i", str(bg),
         "-f", "concat", "-safe", "0", "-i", str(listing),
-        "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",   # a silent track: every platform accepts it
+        *audio,
         "-filter_complex",
         f"[1:v]scale={fw}:-2:flags=lanczos,fps={FPS}[fg];"
         f"[0:v][fg]overlay=({width}-w)/2:{fy}:shortest=1,format=yuv420p[v]",
-        "-map", "[v]", "-map", "2:a", "-t", f"{sum(d for _, d in frames):.2f}",
+        "-map", "[v]", "-map", "2:a", "-t", f"{total:.2f}", *afx,
         "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-r", str(FPS),
-        "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", str(out),
+        "-c:a", "aac", "-b:a", "192k" if music else "64k", "-movflags", "+faststart", str(out),
     ], check=True)
     listing.unlink()
 
@@ -117,14 +140,19 @@ def encode(frames: list[tuple[Path, float]], bg: Path, layout: str, out: Path) -
 def main() -> None:
     if not find_chrome() or not shutil.which("ffmpeg"):
         sys.exit("needs Chrome/Chromium (set JSRECON_BROWSER) and ffmpeg on PATH")
-    out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "build" / "media"
+    ap = argparse.ArgumentParser(description="render the demo as MP4s")
+    ap.add_argument("out_dir", nargs="?", default=str(ROOT / "build" / "media"))
+    ap.add_argument("--music", type=Path, help="audio track to lay under the videos")
+    ap.add_argument("--at", type=float, default=0.0, help="start the track from this second")
+    args = ap.parse_args()
+    out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     frames, fw_px, fh_px = render_frames(out_dir / ".frames")
     with tempfile.TemporaryDirectory() as tmp:
         for layout, (_, _, fw, _, _) in LAYOUTS.items():
             bg = background(layout, Path(tmp), round(fh_px * fw / fw_px))
             target = out_dir / f"{layout}.mp4"
-            encode(frames, bg, layout, target)
+            encode(frames, bg, layout, target, args.music, args.at)
             print(f"  {target}  {target.stat().st_size / 1024 / 1024:.1f} MB")
 
 
