@@ -9,7 +9,7 @@ the endpoints, GraphQL operations, routes and leaked keys the front-end knows ab
 as a table, JSON, Markdown and an OpenAPI 3.1 skeleton.
 
 [![CI](https://github.com/web3daemon/jsrecon/actions/workflows/ci.yml/badge.svg)](https://github.com/web3daemon/jsrecon/actions/workflows/ci.yml)
-[![Release v0.2.0](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-version.svg)](https://github.com/web3daemon/jsrecon/blob/main/CHANGELOG.md)
+[![Release v0.2.0](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-version.svg)](https://pypi.org/project/jsrecon/)
 [![Python 3.10+](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-python.svg)](https://www.python.org/)
 [![License MIT](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-license.svg)](https://github.com/web3daemon/jsrecon/blob/main/LICENSE)
 [![Parser tree-sitter](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-parser.svg)](https://tree-sitter.github.io/)
@@ -28,7 +28,7 @@ as a table, JSON, Markdown and an OpenAPI 3.1 skeleton.
 ## Install
 
 ```bash
-pipx install git+https://github.com/web3daemon/jsrecon      # PyPI release: soon
+pipx install jsrecon          # or: pip install jsrecon inside a venv
 ```
 
 Python 3.10+. No config, no API keys, no browser.

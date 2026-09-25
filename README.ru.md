@@ -9,7 +9,7 @@ jsrecon распаковывает source maps, разбирает каждый 
 JSON, Markdown и скелетом OpenAPI 3.1.
 
 [![CI](https://github.com/web3daemon/jsrecon/actions/workflows/ci.yml/badge.svg)](https://github.com/web3daemon/jsrecon/actions/workflows/ci.yml)
-[![Release v0.2.0](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-version.svg)](https://github.com/web3daemon/jsrecon/blob/main/CHANGELOG.md)
+[![Release v0.2.0](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-version.svg)](https://pypi.org/project/jsrecon/)
 [![Python 3.10+](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-python.svg)](https://www.python.org/)
 [![License MIT](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-license.svg)](https://github.com/web3daemon/jsrecon/blob/main/LICENSE)
 [![Parser tree-sitter](https://raw.githubusercontent.com/web3daemon/jsrecon/main/assets/badge-parser.svg)](https://tree-sitter.github.io/)
@@ -26,7 +26,7 @@ JSON, Markdown и скелетом OpenAPI 3.1.
 ## Установка
 
 ```bash
-pipx install git+https://github.com/web3daemon/jsrecon      # релиз на PyPI — скоро
+pipx install jsrecon          # или: pip install jsrecon внутри venv
 ```
 
 Python 3.10+. Без конфигов, без API-ключей, без браузера.

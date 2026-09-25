@@ -20,6 +20,9 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Security",
     "Topic :: Software Development :: Libraries",
 ]
@@ -38,6 +41,8 @@ jsrecon = "jsrecon.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/web3daemon/jsrecon"
+Source = "https://github.com/web3daemon/jsrecon"
+Changelog = "https://github.com/web3daemon/jsrecon/blob/main/CHANGELOG.md"
 Issues = "https://github.com/web3daemon/jsrecon/issues"
 
 [tool.hatch.build.targets.wheel]
@@ -53,3 +58,6 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501", "E702"]   # long regexes and SVG templates; one-line rows of `t.add_column(...)`
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "README.md", "README.ru.md", "CHANGELOG.md", "SECURITY.md", "LICENSE", "pyproject.toml"]
