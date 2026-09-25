@@ -34,14 +34,11 @@ COLORS = {
     "S": "#7f8cff", "L": "#b7bfff", "s": "#4a52b8", "G": "#39ff14", "C": "#39ff14",
 }
 
-# grey levels for the 1-bit kit (reel, posts): shell light, braces cut out
-TONES = {"O": 1.0, "H": 1.0, "D": 0.55, "W": 1.0, "K": 0.0,
-         "S": 0.82, "L": 1.0, "s": 0.55, "G": 0.0, "C": 0.0}
-
 # animation groups for the SVG logo
 EYES = {(c, r) for r in range(3, 6) for c in (21, 22, 23, 25, 26, 27)}
 CLAW_TIP = {(28, 5), (31, 5), (31, 6), (31, 7)}          # pincer tips
 CURSOR = {(c, r) for c in (9, 10) for r in (10, 11)}
+CLAW_CLOSED = {(28, 5): ".", (31, 5): ".", (31, 6): ".", (31, 7): "O", (30, 5): "O", (29, 5): "O"}
 
 WIDTH, HEIGHT = len(HERMIT[0]), len(HERMIT)
 assert all(len(row) == WIDTH for row in HERMIT), [len(r) for r in HERMIT]
@@ -54,25 +51,42 @@ def cells():
                 yield x, y, ch
 
 
-def mask(block: int = 10, tones: dict | None = None):
-    """Grey-level array for the 1-bit kit (numpy)."""
+def grid(blink: bool = False, snap: bool = False) -> list[list[str]]:
+    """The grid as mutable rows, with eyes shut and/or the claw closed."""
+    rows = [list(r) for r in HERMIT]
+    if blink:
+        for c, r in EYES:
+            rows[r][c] = "W" if r == 4 else "."
+    if snap:
+        for (c, r), ch in CLAW_CLOSED.items():
+            rows[r][c] = ch
+    return rows
+
+
+def onebit(block: int = 10, blink: bool = False, snap: bool = False, cursor: bool = True):
+    """(coverage, tone) arrays for the 1-bit kit (reel, posts): a solid white crab,
+    a diagonally hatched shell, braces cut out in black."""
     import numpy as np
 
-    tones = tones or TONES
-    m = np.zeros((HEIGHT * block, WIDTH * block), np.float32)
-    for x, y, ch in cells():
-        m[y * block:(y + 1) * block, x * block:(x + 1) * block] = tones[ch]
-    return m
-
-
-def alpha(block: int = 10):
-    """Coverage mask (1 where the mascot has a pixel)."""
-    import numpy as np
-
-    m = np.zeros((HEIGHT * block, WIDTH * block), np.float32)
-    for x, y, _ in cells():
-        m[y * block:(y + 1) * block, x * block:(x + 1) * block] = 1.0
-    return m
+    rows = grid(blink, snap)
+    h, w = len(rows) * block, len(rows[0]) * block
+    cov = np.zeros((h, w), np.float32)
+    tone = np.zeros((h, w), np.float32)
+    yy, xx = np.mgrid[0:block, 0:block]
+    step = max(2, block // 6)
+    hatch = (((xx + yy) // step) % 2 == 0).astype(np.float32)
+    sparse = (((xx + yy) // step) % 3 == 0).astype(np.float32)
+    fill = {"O": 1.0, "W": 1.0, "L": 1.0, "H": 0.55, "D": 0.55, "K": 0.0, "G": 0.0,
+            "C": 1.0 if cursor else None, "S": None, "s": None}
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            if ch == ".":
+                continue
+            sl = (slice(y * block, (y + 1) * block), slice(x * block, (x + 1) * block))
+            cov[sl] = 1.0
+            v = fill[ch]
+            tone[sl] = (0.12 + 0.8 * (sparse if ch == "s" else hatch)) if v is None else v
+    return cov, tone
 
 
 if __name__ == "__main__":

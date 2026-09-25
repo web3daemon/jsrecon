@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from mascot import CLAW_TIP, COLORS, CURSOR, EYES, HEIGHT, WIDTH, cells  # noqa: E402
+from mascot import CLAW_CLOSED, CLAW_TIP, COLORS, CURSOR, EYES, HEIGHT, WIDTH, cells  # noqa: E402
 
 OUT = ROOT / "assets"
 BG = "#0b0f0c"
@@ -37,9 +37,8 @@ GLYPHS = {
     "n": [".....", ".....", "XXXX.", "X...X", "X...X", "X...X", "X...X", ".....", "....."],
 }
 
-# closed-eye and closed-claw frames (cell → colour key, "." clears the cell)
+# closed-eye frame (cell → colour key, "." clears the cell)
 EYES_CLOSED = {(c, r): ("W" if r == 4 else ".") for c, r in EYES}
-CLAW_CLOSED = {(28, 5): ".", (31, 5): ".", (31, 6): ".", (31, 7): "O", (30, 5): "O", (29, 5): "O"}
 
 
 def _rects(items, px: int) -> str:
